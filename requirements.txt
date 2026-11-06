@@ -1,0 +1,2 @@
+# El núcleo distribuido usa solo la biblioteca estándar de Python.
+# Para el cliente gráfico 3D: pip install -r requirements-render.txt

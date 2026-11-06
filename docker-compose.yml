@@ -1,0 +1,124 @@
+name: neonrush
+
+x-node-base: &node-base
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: neonrush-node:latest
+  networks:
+    - neon-net
+  volumes:
+    - ./neonrush:/app/neonrush:ro
+    - ./run.py:/app/run.py:ro
+
+services:
+  worker-1:
+    <<: *node-base
+    container_name: neonrush-worker-1
+    hostname: worker1
+    environment:
+      NEONRUSH_MPI_ROLE: worker
+    command: ["sleep", "infinity"]
+    volumes:
+      - ./neonrush:/app/neonrush:ro
+      - ./run.py:/app/run.py:ro
+      - mpi-ssh:/run/mpi-ssh:ro
+    cpus: 1.5
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "ss -ltn | grep -q ':22 '"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  worker-2:
+    <<: *node-base
+    container_name: neonrush-worker-2
+    hostname: worker2
+    environment:
+      NEONRUSH_MPI_ROLE: worker
+    command: ["sleep", "infinity"]
+    volumes:
+      - ./neonrush:/app/neonrush:ro
+      - ./run.py:/app/run.py:ro
+      - mpi-ssh:/run/mpi-ssh:ro
+    cpus: 1.5
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "ss -ltn | grep -q ':22 '"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  master:
+    <<: *node-base
+    container_name: neonrush-master
+    hostname: master
+    environment:
+      NEONRUSH_MPI_ROLE: master
+      NEONRUSH_MPI_PEERS: "worker1 worker2"
+    depends_on:
+      worker-1:
+        condition: service_healthy
+      worker-2:
+        condition: service_healthy
+    command:
+      - mpirun
+      - --allow-run-as-root
+      - --oversubscribe
+      - --bind-to
+      - none
+      - --host
+      - master:1,worker1:1,worker2:1
+      - -np
+      - "3"
+      - python
+      - run.py
+      - mpi-cluster
+      - --host
+      - 0.0.0.0
+      - --port
+      - "50505"
+      - --room
+      - NEON
+      - --players
+      - "1"
+      - --ai-opponents
+      - "1"
+      - --laps
+      - "3"
+      - --track-style
+      - neon
+    volumes:
+      - ./neonrush:/app/neonrush:ro
+      - ./run.py:/app/run.py:ro
+      - mpi-ssh:/run/mpi-ssh
+      - mpi-private:/run/mpi-private
+    cpus: 2.0
+    mem_limit: 2g
+    ports:
+      - "50505:50505"
+    networks:
+      neon-net:
+        aliases:
+          - master
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import socket;
+          socket.create_connection(('127.0.0.1',50505),1).close()
+      interval: 3s
+      timeout: 2s
+      retries: 30
+      start_period: 10s
+
+networks:
+  neon-net:
+    driver: bridge
+
+volumes:
+  mpi-ssh:
+  mpi-private:

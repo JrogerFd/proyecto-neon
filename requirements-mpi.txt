@@ -1,0 +1,2 @@
+# Compiled against the OpenMPI libraries installed in the Docker image.
+mpi4py>=4.0,<5
