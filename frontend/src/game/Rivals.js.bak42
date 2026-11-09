@@ -1,0 +1,185 @@
+import * as THREE from 'three';
+import { createCar } from './Car.js';
+import { getTrackPoint } from './Track.js';
+
+export class Rivals {
+  constructor(scene) {
+    this.scene = scene;
+    this.cars = [];
+
+    this.createRivals();
+  }
+
+  createRivals() {
+    const rivalsData = [
+      {
+        name: 'NOVA',
+        color: 0x00eaff,
+        speed: 0.033,
+        progress: 0.985,
+        laneOffset: -2.5
+      },
+      {
+        name: 'BLAZE',
+        color: 0xff0088,
+        speed: 0.030,
+        progress: 0.970,
+        laneOffset: 2.5
+      },
+      {
+        name: 'VOLT',
+        color: 0xa855ff,
+        speed: 0.027,
+        progress: 0.955,
+        laneOffset: -2.5
+      }
+    ];
+
+    for (const data of rivalsData) {
+      const car = createCar();
+
+      // Clonar materiales para no modificar
+      // el automóvil del jugador.
+      car.traverse((object) => {
+        if (!object.isMesh || !object.material) return;
+
+        const materials = Array.isArray(object.material)
+          ? object.material
+          : [object.material];
+
+        const cloned = materials.map((material) => {
+          const copy = material.clone();
+
+          if (
+            copy.color &&
+            copy.color.r > 0.15 &&
+            copy.color.b > 0.15
+          ) {
+            copy.color.setHex(data.color);
+
+            if ('emissive' in copy) {
+              copy.emissive.setHex(data.color);
+              copy.emissiveIntensity = 0.35;
+            }
+          }
+
+          return copy;
+        });
+
+        object.material = Array.isArray(object.material)
+          ? cloned
+          : cloned[0];
+      });
+
+      this.scene.add(car);
+
+      const rival = {
+        name: data.name,
+        color: data.color,
+        mesh: car,
+        speed: data.speed,
+        progress: data.progress,
+        startProgress: data.progress,
+        laneOffset: data.laneOffset,
+        lap: 1,
+        completedLaps: 0
+      };
+
+      this.cars.push(rival);
+
+      this.positionRival(rival);
+    }
+  }
+
+  getLanePoint(progress, laneOffset) {
+    const normalizedProgress =
+      ((progress % 1) + 1) % 1;
+
+    const point = getTrackPoint(normalizedProgress);
+
+    const before = getTrackPoint(
+      (normalizedProgress - 0.0001 + 1) % 1
+    );
+
+    const after = getTrackPoint(
+      (normalizedProgress + 0.0001) % 1
+    );
+
+    const tangent = after.clone()
+      .sub(before)
+      .normalize();
+
+    const normal = new THREE.Vector3(
+      tangent.z,
+      0,
+      -tangent.x
+    );
+
+    point.addScaledVector(normal, laneOffset);
+
+    return point;
+  }
+
+  positionRival(rival) {
+    const position = this.getLanePoint(
+      rival.progress,
+      rival.laneOffset
+    );
+
+    const nextPosition = this.getLanePoint(
+      rival.progress + 0.001,
+      rival.laneOffset
+    );
+
+    const direction = nextPosition
+      .clone()
+      .sub(position)
+      .normalize();
+
+    rival.mesh.position.copy(position);
+
+    // El frente del modelo apunta hacia -Z.
+    rival.mesh.rotation.y = Math.atan2(
+      -direction.x,
+      -direction.z
+    );
+  }
+
+  update(delta) {
+    // Evitar saltos excesivos si la pestaña
+    // del navegador estuvo inactiva.
+    const safeDelta = Math.min(delta, 0.05);
+
+    for (const rival of this.cars) {
+      const previousProgress = rival.progress;
+
+      rival.progress += rival.speed * safeDelta;
+
+      if (rival.progress >= 1) {
+        rival.progress -= 1;
+        rival.completedLaps += 1;
+        rival.lap = rival.completedLaps + 1;
+      }
+
+      this.positionRival(rival);
+    }
+  }
+
+  reset() {
+    for (const rival of this.cars) {
+      rival.progress = rival.startProgress;
+      rival.completedLaps = 0;
+      rival.lap = 1;
+
+      this.positionRival(rival);
+    }
+  }
+
+  destroy() {
+    for (const rival of this.cars) {
+      this.scene.remove(rival.mesh);
+    }
+
+    this.cars = [];
+  }
+}

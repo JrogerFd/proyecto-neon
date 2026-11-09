@@ -1,0 +1,489 @@
+import { MiniMap } from './MiniMap.js';
+import { RaceIntro } from './RaceIntro.js';
+import { ObstacleSystem } from './Obstacles.js';
+import { CollisionSystem } from './Collision.js';
+import { isOnTrack } from './Track.js';
+import { LapManager } from './LapManager.js';
+import * as THREE from 'three';
+import { createCar } from './Car.js';
+import { createTrack } from './Track.js';
+
+export class Race {
+  constructor(container) {
+    this.container = container;
+
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x050510);
+    this.scene.fog = new THREE.Fog(0x050510, 40, 180);
+
+    this.camera = new THREE.PerspectiveCamera(
+      65,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      500
+    );
+
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true
+    });
+
+    this.renderer.setSize(
+      window.innerWidth,
+      window.innerHeight
+    );
+
+    this.renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, 2)
+    );
+
+    this.container.appendChild(this.renderer.domElement);
+
+    this.scene.add(
+      new THREE.HemisphereLight(0x00eaff, 0x110022, 2)
+    );
+
+    const light = new THREE.DirectionalLight(0xffffff, 2);
+    light.position.set(10, 20, 10);
+    this.scene.add(light);
+
+    createTrack(this.scene);
+
+    // Obstáculos interactivos
+    this.obstacleSystem = new ObstacleSystem(this.scene);
+
+    this.car = createCar();
+    this.car.position.set(35, 0, 0);
+    this.car.rotation.y = Math.PI;
+    this.scene.add(this.car);
+
+    // SPRINT 3.7 — Minimapa en tiempo real.
+    this.miniMap = new MiniMap();
+    this.miniMap.update(this.car);
+
+    this.lapManager = new LapManager(3);
+    this.collisionSystem = new CollisionSystem();
+    this.collisionFlash = 0;
+    this.previousCarPosition = this.car.position.clone();
+
+    this.keys = {};
+    this.speed = 0;
+    this.maxSpeed = 0.65;
+    this.acceleration = 0.012;
+    this.friction = 0.006;
+
+    this.clock = new THREE.Clock();
+
+    this.elapsedTime = 0;
+    this.nitro = 100;
+    this.nitroActive = false;
+
+    this.onKeyDown = (event) => {
+      this.keys[event.code] = true;
+
+      if ([
+        'ArrowUp',
+        'ArrowDown',
+        'ArrowLeft',
+        'ArrowRight',
+        'Space'
+      ].includes(event.code)) {
+        event.preventDefault();
+      }
+    };
+
+    this.onKeyUp = (event) => {
+      this.keys[event.code] = false;
+    };
+
+    this.onResize = () => {
+      this.camera.aspect =
+        window.innerWidth / window.innerHeight;
+
+      this.camera.updateProjectionMatrix();
+
+      this.renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+      );
+    };
+
+    window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('keyup', this.onKeyUp);
+    window.addEventListener('resize', this.onResize);
+
+    // SPRINT 3.6 — Introducción de NEON CITY
+    this.raceIntro = new RaceIntro();
+    this.raceStarted = false;
+
+    this.startRaceIntro();
+
+    this.running = true;
+    this.animate();
+  }
+
+  startRaceIntro() {
+    this.raceStarted = false;
+    this.speed = 0;
+    this.nitroActive = false;
+    this.keys = {};
+
+    this.raceIntro.start(() => {
+      this.raceStarted = true;
+
+      // Evitar que el tiempo de la introducción
+      // afecte al primer fotograma de la carrera.
+      this.clock.getDelta();
+    });
+  }
+
+  update(delta) {
+    if (this.raceFinished || !this.raceStarted) return;
+    const step = Math.min(delta * 60, 2);
+
+    this.elapsedTime += delta;
+
+    const minutes = Math.floor(this.elapsedTime / 60);
+    const seconds = Math.floor(this.elapsedTime % 60);
+
+    const timerElement = document.getElementById('raceTime');
+
+    if (timerElement) {
+      timerElement.textContent =
+        String(minutes).padStart(2, '0') + ':' +
+        String(seconds).padStart(2, '0');
+    }
+
+    this.nitroActive =
+      this.keys['Space'] &&
+      this.nitro > 0 &&
+      this.speed > 0.05;
+
+    if (this.nitroActive) {
+      this.nitro = Math.max(0, this.nitro - 25 * delta);
+    } else {
+      this.nitro = Math.min(100, this.nitro + 8 * delta);
+    }
+
+    const nitroFill = document.getElementById('nitroFill');
+
+    if (nitroFill) {
+      nitroFill.style.width = this.nitro + '%';
+    }
+
+    if (this.keys['KeyW'] || this.keys['ArrowUp']) {
+      this.speed += this.acceleration * step;
+    } else if (this.keys['KeyS'] || this.keys['ArrowDown']) {
+      this.speed -= this.acceleration * step;
+    } else {
+      if (this.speed > 0) {
+        this.speed = Math.max(
+          0,
+          this.speed - this.friction * step
+        );
+      } else {
+        this.speed = Math.min(
+          0,
+          this.speed + this.friction * step
+        );
+      }
+    }
+
+    const offTrack = !isOnTrack(
+      this.car.position.x,
+      this.car.position.z
+    );
+
+    const currentMaxSpeed = this.nitroActive
+      ? this.maxSpeed * 1.6
+      : this.maxSpeed;
+
+    const surfaceMaxSpeed = offTrack
+      ? currentMaxSpeed * 0.4
+      : currentMaxSpeed;
+
+    this.speed = THREE.MathUtils.clamp(
+      this.speed,
+      -this.maxSpeed / 2,
+      surfaceMaxSpeed
+    );
+
+    const steering = 0.025 * step;
+
+    if (Math.abs(this.speed) > 0.01) {
+      if (this.keys['KeyA'] || this.keys['ArrowLeft']) {
+        this.car.rotation.y += steering;
+      }
+
+      if (this.keys['KeyD'] || this.keys['ArrowRight']) {
+        this.car.rotation.y -= steering;
+      }
+    }
+
+    // Guardar la posición anterior para calcular colisiones.
+    const previousPosition = this.car.position.clone();
+
+    this.car.translateZ(-this.speed * step);
+
+    // =====================================
+    // COLISIONES CON OBSTÁCULOS
+    // =====================================
+
+    this.obstacleSystem.update(delta);
+
+    const obstacleCollision =
+      this.obstacleSystem.checkCollision(
+        this.car,
+        previousPosition
+      );
+
+    if (obstacleCollision.collided) {
+      // Reducir velocidad y provocar un rebote arcade.
+      this.speed = -Math.abs(this.speed) * 0.18;
+
+      // Efecto visual del impacto.
+      this.collisionFlash = 0.3;
+
+      console.log('💥 Rebote contra obstáculo neón');
+    }
+
+
+    // =====================================
+    // COLISIONES CON BARRERAS
+    // =====================================
+
+    this.collisionSystem.update(delta);
+
+    const collision = this.collisionSystem.checkTrackCollision(
+      this.car,
+      this.speed
+    );
+
+    if (collision.collided) {
+      this.speed = collision.speed;
+      this.collisionFlash = 0.25;
+    }
+
+    if (this.collisionFlash > 0) {
+      this.collisionFlash -= delta;
+    }
+
+    const flashElement = document.getElementById('collisionFlash');
+
+    if (flashElement) {
+      flashElement.style.opacity =
+        this.collisionFlash > 0 ? '1' : '0';
+    }
+
+
+    // Comprobar el avance por el circuito
+    this.updateLaps();
+
+
+    // Actualizar indicador de velocidad
+    const speedElement = document.getElementById('speedValue');
+
+    if (speedElement) {
+      const kmh = Math.round(Math.abs(this.speed) * 300);
+      speedElement.textContent = kmh;
+    }
+
+    // Cámara de persecución
+    const cameraOffset = new THREE.Vector3(0, 5, 10);
+    cameraOffset.applyQuaternion(this.car.quaternion);
+
+    const desiredPosition = this.car.position
+      .clone()
+      .add(cameraOffset);
+
+    this.camera.position.lerp(
+      desiredPosition,
+      Math.min(0.08 * step, 1)
+    );
+
+    const lookTarget = this.car.position.clone();
+    lookTarget.y += 1;
+
+    this.camera.lookAt(lookTarget);
+  }
+
+  animate() {
+    if (!this.running) return;
+
+    const delta = this.clock.getDelta();
+
+    this.update(delta);
+
+    // Actualizar posición y orientación en tiempo real.
+    if (this.miniMap) {
+      this.miniMap.update(this.car);
+    }
+
+    this.renderer.render(this.scene, this.camera);
+
+    this.animationId = requestAnimationFrame(
+      () => this.animate()
+    );
+  }
+
+  updateLaps() {
+    if (this.lapManager.finished) return;
+
+    const p = this.car.position;
+    const previous = this.previousCarPosition;
+
+    // Los puntos deben recorrerse en este orden:
+    // norte -> oeste -> sur -> meta.
+
+    if (
+      p.z > 45 &&
+      p.x > 20 &&
+      isOnTrack(p.x, p.z)
+    ) {
+      this.lapManager.visitCheckpoint('north');
+    }
+
+    if (
+      p.x < -25 &&
+      Math.abs(p.z) < 12 &&
+      isOnTrack(p.x, p.z)
+    ) {
+      this.lapManager.visitCheckpoint('west');
+    }
+
+    if (
+      p.z < -45 &&
+      p.x > 20 &&
+      isOnTrack(p.x, p.z)
+    ) {
+      this.lapManager.visitCheckpoint('south');
+    }
+
+    const crossedFinish =
+      previous.z < 0 &&
+      p.z >= 0 &&
+      Math.abs(p.x - 35) < 7 &&
+      isOnTrack(p.x, p.z);
+
+    if (crossedFinish) {
+      const result = this.lapManager.crossFinishLine();
+
+      if (result.valid) {
+        console.log(
+          `🏁 Vuelta ${result.completedLaps} completada`
+        );
+
+        if (result.finished) {
+          this.finishRace();
+        }
+      }
+    }
+
+    const lapElement = document.getElementById('lapValue');
+
+    if (lapElement) {
+      lapElement.textContent =
+        `${this.lapManager.currentLap}/${this.lapManager.totalLaps}`;
+    }
+
+    this.previousCarPosition.copy(p);
+  }
+
+  finishRace() {
+    this.speed = 0;
+    this.keys = {};
+    this.raceFinished = true;
+
+    const minutes = Math.floor(this.elapsedTime / 60);
+    const seconds = Math.floor(this.elapsedTime % 60);
+
+    const time =
+      String(minutes).padStart(2, '0') + ':' +
+      String(seconds).padStart(2, '0');
+
+    const screen = document.createElement('div');
+    screen.className = 'race-results';
+    screen.id = 'raceResults';
+
+    screen.innerHTML = `
+      <div class="race-results-panel">
+        <h1>🏁 ¡CARRERA TERMINADA!</h1>
+        <p>Has completado las 3 vueltas.</p>
+        <h2>TIEMPO FINAL: ${time}</h2>
+
+        <button id="playAgain">↻ VOLVER A CORRER</button>
+        <button id="exitRace">← MENÚ PRINCIPAL</button>
+      </div>
+    `;
+
+    document.getElementById('ui-container').appendChild(screen);
+  }
+
+  reset() {
+    this.raceFinished = false;
+
+    const results = document.getElementById('raceResults');
+
+    if (results) {
+      results.remove();
+    }
+
+    this.car.position.set(35, 0, 0);
+    this.car.rotation.set(0, Math.PI, 0);
+
+    this.lapManager.reset();
+    this.previousCarPosition.copy(this.car.position);
+
+    const lapElement = document.getElementById('lapValue');
+
+    if (lapElement) {
+      lapElement.textContent = '1/3';
+    }
+
+    this.speed = 0;
+    this.nitro = 100;
+    this.nitroActive = false;
+    this.elapsedTime = 0;
+    this.keys = {};
+
+    this.camera.position.set(0, 5, 20);
+    this.camera.lookAt(this.car.position);
+
+    // Repetir la presentación al reiniciar.
+    this.startRaceIntro();
+  }
+
+  destroy() {
+    if (this.miniMap) {
+      this.miniMap.destroy();
+    }
+
+    if (this.raceIntro) {
+      this.raceIntro.destroy();
+    }
+
+    this.running = false;
+
+    cancelAnimationFrame(this.animationId);
+
+    window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('keyup', this.onKeyUp);
+    window.removeEventListener('resize', this.onResize);
+
+    this.scene.traverse((object) => {
+      if (object.geometry) {
+        object.geometry.dispose();
+      }
+
+      if (object.material) {
+        const materials = Array.isArray(object.material)
+          ? object.material
+          : [object.material];
+
+        materials.forEach((material) => material.dispose());
+      }
+    });
+
+    this.renderer.dispose();
+    this.renderer.domElement.remove();
+  }
+}

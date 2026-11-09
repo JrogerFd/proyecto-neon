@@ -1,0 +1,164 @@
+import * as THREE from 'three';
+
+export const TRACK = {
+  radius: 35,
+  halfStraight: 45,
+  width: 14,
+  startZ: 0
+};
+
+export function createTrack(scene) {
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(300, 300),
+    new THREE.MeshStandardMaterial({
+      color: 0x050510,
+      roughness: 0.95
+    })
+  );
+
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.05;
+  scene.add(ground);
+
+  const roadMaterial = new THREE.MeshStandardMaterial({
+    color: 0x171725,
+    roughness: 0.85,
+    side: THREE.DoubleSide
+  });
+
+  const outerRadius = TRACK.radius + TRACK.width / 2;
+  const innerRadius = TRACK.radius - TRACK.width / 2;
+
+  // La pista se construye como una banda ovalada.
+  const outer = [];
+  const inner = [];
+
+  const segments = 160;
+
+  for (let i = 0; i <= segments; i++) {
+    const t = (i / segments) * Math.PI * 2;
+
+    const centerX = TRACK.radius * Math.cos(t);
+    const centerZ =
+      TRACK.halfStraight * Math.sign(Math.sin(t)) +
+      TRACK.radius * Math.sin(t);
+
+    // Aproximación geométrica del borde.
+    const nx = Math.cos(t);
+    const nz = Math.sin(t);
+
+    outer.push(
+      new THREE.Vector3(
+        centerX + nx * TRACK.width / 2,
+        0.02,
+        centerZ + nz * TRACK.width / 2
+      )
+    );
+
+    inner.push(
+      new THREE.Vector3(
+        centerX - nx * TRACK.width / 2,
+        0.02,
+        centerZ - nz * TRACK.width / 2
+      )
+    );
+  }
+
+  const vertices = [];
+  const indices = [];
+
+  for (let i = 0; i <= segments; i++) {
+    vertices.push(
+      outer[i].x, outer[i].y, outer[i].z,
+      inner[i].x, inner[i].y, inner[i].z
+    );
+  }
+
+  for (let i = 0; i < segments; i++) {
+    const a = i * 2;
+    const b = a + 1;
+    const c = a + 2;
+    const d = a + 3;
+
+    indices.push(a, b, c);
+    indices.push(b, d, c);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+
+  geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(vertices, 3)
+  );
+
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+
+  const road = new THREE.Mesh(geometry, roadMaterial);
+  scene.add(road);
+
+  // Bordes luminosos
+  const cyanMaterial = new THREE.LineBasicMaterial({
+    color: 0x00eaff
+  });
+
+  const purpleMaterial = new THREE.LineBasicMaterial({
+    color: 0xaa00ff
+  });
+
+  const outerLine = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(
+      outer.slice(0, -1)
+    ),
+    cyanMaterial
+  );
+
+  const innerLine = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(
+      inner.slice(0, -1)
+    ),
+    purpleMaterial
+  );
+
+  scene.add(outerLine);
+  scene.add(innerLine);
+
+  // Línea de salida provisional
+  const startLine = new THREE.Mesh(
+    new THREE.PlaneGeometry(TRACK.width, 1.5),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      side: THREE.DoubleSide
+    })
+  );
+
+  startLine.rotation.x = -Math.PI / 2;
+  startLine.position.set(
+    TRACK.radius,
+    0.05,
+    TRACK.startZ
+  );
+
+  scene.add(startLine);
+
+  // Torres decorativas
+  const towerMaterial = new THREE.MeshStandardMaterial({
+    color: 0x101030,
+    emissive: 0x110033,
+    metalness: 0.7
+  });
+
+  for (let z = -80; z <= 80; z += 20) {
+    [-65, 65].forEach((x) => {
+      const height = 10 + (Math.abs(z) % 15);
+
+      const tower = new THREE.Mesh(
+        new THREE.BoxGeometry(6, height, 6),
+        towerMaterial
+      );
+
+      tower.position.set(x, height / 2, z);
+      scene.add(tower);
+    });
+  }
+}

@@ -1,0 +1,17 @@
+**
+!backend/
+!backend/CMakeLists.txt
+!backend/README.md
+!backend/include/
+!backend/include/**
+!backend/src/
+!backend/src/**
+!backend/tests/
+!backend/tests/**
+!infrastructure/
+!infrastructure/mpi-cluster/
+!infrastructure/mpi-cluster/config/
+!infrastructure/mpi-cluster/config/hostfile
+!infrastructure/mpi-cluster/scripts/
+!infrastructure/mpi-cluster/scripts/cluster-entrypoint.sh
+!infrastructure/mpi-cluster/scripts/run-mpi.sh

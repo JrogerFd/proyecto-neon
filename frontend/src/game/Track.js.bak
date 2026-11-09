@@ -1,0 +1,91 @@
+import * as THREE from 'three';
+
+export function createTrack(scene) {
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(300, 300),
+    new THREE.MeshStandardMaterial({
+      color: 0x070714,
+      roughness: 0.9
+    })
+  );
+
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.05;
+  scene.add(ground);
+
+  const road = new THREE.Mesh(
+    new THREE.PlaneGeometry(18, 200),
+    new THREE.MeshStandardMaterial({
+      color: 0x171725,
+      roughness: 0.85
+    })
+  );
+
+  road.rotation.x = -Math.PI / 2;
+  road.position.y = 0.01;
+  scene.add(road);
+
+  const lineMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00eaff
+  });
+
+  for (let z = -95; z <= 95; z += 12) {
+    const line = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.25, 6),
+      lineMaterial
+    );
+
+    line.rotation.x = -Math.PI / 2;
+    line.position.set(0, 0.025, z);
+
+    scene.add(line);
+  }
+
+  const barrierMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8b00ff,
+    emissive: 0x440088,
+    emissiveIntensity: 1
+  });
+
+  [-9.5, 9.5].forEach((x) => {
+    const barrier = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.8, 200),
+      barrierMaterial
+    );
+
+    barrier.position.set(x, 0.4, 0);
+    scene.add(barrier);
+  });
+
+  const startLine = new THREE.Mesh(
+    new THREE.PlaneGeometry(18, 1),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff
+    })
+  );
+
+  startLine.rotation.x = -Math.PI / 2;
+  startLine.position.set(0, 0.03, 10);
+  scene.add(startLine);
+
+  // Torres futuristas a los lados de la pista
+  const towerMaterial = new THREE.MeshStandardMaterial({
+    color: 0x101030,
+    emissive: 0x090025,
+    metalness: 0.7
+  });
+
+  for (let z = -90; z <= 90; z += 20) {
+    [-20, 20].forEach((x) => {
+      const height = 8 + (Math.abs(z) % 12);
+
+      const tower = new THREE.Mesh(
+        new THREE.BoxGeometry(5, height, 5),
+        towerMaterial
+      );
+
+      tower.position.set(x, height / 2, z);
+      scene.add(tower);
+    });
+  }
+}

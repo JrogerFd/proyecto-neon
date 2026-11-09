@@ -1,0 +1,126 @@
+import * as THREE from 'three';
+import { TRACK, getTrackPoint } from './Track.js';
+
+export class ObstacleSystem {
+  constructor(scene) {
+    this.scene = scene;
+    this.obstacles = [];
+
+    this.createObstacles();
+  }
+
+  createObstacles() {
+    const positions = [
+      0.10,
+      0.25,
+      0.40,
+      0.58,
+      0.75,
+      0.90
+    ];
+
+    positions.forEach((progress, index) => {
+      const point = getTrackPoint(progress);
+
+      const before = getTrackPoint(progress - 0.0001);
+      const after = getTrackPoint(progress + 0.0001);
+
+      const tangent = after.clone().sub(before).normalize();
+
+      const normal = new THREE.Vector3(
+        tangent.z,
+        0,
+        -tangent.x
+      );
+
+      // Alternar obstáculos a izquierda y derecha.
+      const offset = index % 2 === 0 ? -2.5 : 2.5;
+
+      point.addScaledVector(normal, offset);
+
+      this.createBlock(point, index);
+    });
+  }
+
+  createBlock(position, index) {
+    const group = new THREE.Group();
+
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x161629,
+      metalness: 0.7,
+      roughness: 0.3
+    });
+
+    const glowMaterial = new THREE.MeshStandardMaterial({
+      color: index % 2 === 0 ? 0xff00aa : 0x00eaff,
+      emissive: index % 2 === 0 ? 0xff00aa : 0x00eaff,
+      emissiveIntensity: 1.5
+    });
+
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(3, 2, 3),
+      material
+    );
+
+    body.position.y = 1;
+    group.add(body);
+
+    const topGlow = new THREE.Mesh(
+      new THREE.BoxGeometry(3.1, 0.15, 3.1),
+      glowMaterial
+    );
+
+    topGlow.position.y = 2;
+    group.add(topGlow);
+
+    const frontGlow = new THREE.Mesh(
+      new THREE.BoxGeometry(3.1, 0.2, 0.15),
+      glowMaterial
+    );
+
+    frontGlow.position.set(0, 1, 1.55);
+    group.add(frontGlow);
+
+    group.position.set(position.x, 0, position.z);
+
+    this.scene.add(group);
+
+    this.obstacles.push({
+      mesh: group,
+      radius: 2.1,
+      cooldown: 0
+    });
+  }
+
+  update(delta) {
+    for (const obstacle of this.obstacles) {
+      if (obstacle.cooldown > 0) {
+        obstacle.cooldown -= delta;
+      }
+    }
+  }
+
+  checkCollision(car) {
+    for (const obstacle of this.obstacles) {
+      if (obstacle.cooldown > 0) continue;
+
+      const dx = car.position.x - obstacle.mesh.position.x;
+      const dz = car.position.z - obstacle.mesh.position.z;
+
+      const distance = Math.hypot(dx, dz);
+
+      if (distance < obstacle.radius + 1.2) {
+        obstacle.cooldown = 0.7;
+
+        return {
+          collided: true,
+          obstacle
+        };
+      }
+    }
+
+    return {
+      collided: false
+    };
+  }
+}

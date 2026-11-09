@@ -1,0 +1,301 @@
+// ========================================
+// NEON RUSH - SISTEMA DE PANTALLAS
+// ========================================
+
+export const screens = {
+  welcome: `
+    <div class="screen welcome-screen">
+      <h1 class="logo">NEON RUSH</h1>
+      <p class="subtitle">THE FUTURE OF RACING</p>
+
+      <div class="menu">
+        <button class="primary" data-screen="home">
+          ▶ JUGAR
+        </button>
+
+        <button data-screen="settings">
+          ⚙ CONFIGURACIÓN
+        </button>
+
+        <button data-screen="about">
+          ⓘ ACERCA DEL JUEGO
+        </button>
+      </div>
+
+      <p class="footer">NEON RUSH | VERSIÓN 0.1</p>
+    </div>
+  `,
+
+  home: `
+    <div class="screen home-screen">
+      <h1 class="section-title">NEON RUSH</h1>
+      <p class="section-subtitle">MENÚ PRINCIPAL</p>
+
+      <div class="menu-grid">
+        <button data-screen="quickRace">🏁 CARRERA RÁPIDA</button>
+        <button data-screen="championship">🏆 CAMPEONATO</button>
+        <button data-screen="garage">🚗 MI GARAJE</button>
+        <button data-screen="tracks">🛣️ CIRCUITOS</button>
+        <button data-screen="challenges">🎯 DESAFÍOS</button>
+        <button data-screen="stats">📊 ESTADÍSTICAS</button>
+        <button data-screen="laboratory">💻 LABORATORIO PARALELO</button>
+        <button data-screen="settings">⚙ CONFIGURACIÓN</button>
+      </div>
+
+      <button class="back-btn" data-screen="welcome">
+        ← SALIR AL INICIO
+      </button>
+    </div>
+  `,
+
+  quickRace: `
+    <div class="screen content-screen">
+      <h1 class="section-title">🏁 CARRERA RÁPIDA</h1>
+      <p>Prepara tu próxima carrera.</p>
+
+      <div class="game-panel">
+        <label for="raceTrack">Circuito</label>
+        <select id="raceTrack">
+          <option value="neon-city">Neon City</option>
+          <option value="cyber-desert">Cyber Desert</option>
+          <option value="plasma-circuit">Plasma Circuit</option>
+        </select>
+
+        <label for="raceDifficulty">Dificultad</label>
+        <select id="raceDifficulty">
+          <option value="easy">Fácil</option>
+          <option value="normal">Normal</option>
+          <option value="hard">Difícil</option>
+        </select>
+
+        <label for="raceLaps">Vueltas</label>
+        <select id="raceLaps">
+          <option value="1">1 vuelta</option>
+          <option value="3" selected>3 vueltas</option>
+          <option value="5">5 vueltas</option>
+        </select>
+
+        <button class="primary" id="startRace">
+          ▶ INICIAR CARRERA
+        </button>
+      </div>
+
+      <button class="back-btn" data-screen="home">
+        ← VOLVER
+      </button>
+    </div>
+  `,
+
+  championship: `
+    <div class="screen content-screen">
+      <h1 class="section-title">🏆 CAMPEONATO</h1>
+      <p>Conquista los circuitos de Neon Rush.</p>
+
+      <div class="cards">
+        <div class="game-card">
+          <h2>NEON START</h2>
+          <p>Niveles 1 - 4</p>
+          <span>Disponible próximamente</span>
+        </div>
+
+        <div class="game-card locked">
+          <h2>TURBO ZONE</h2>
+          <p>Niveles 5 - 8</p>
+          <span>🔒 Bloqueado</span>
+        </div>
+
+        <div class="game-card locked">
+          <h2>CHAOS CIRCUIT</h2>
+          <p>Niveles 9 - 12</p>
+          <span>🔒 Bloqueado</span>
+        </div>
+      </div>
+
+      <button class="back-btn" data-screen="home">← VOLVER</button>
+    </div>
+  `,
+
+  garage: `
+    <div class="screen content-screen">
+      <h1 class="section-title">🚗 MI GARAJE</h1>
+      <p>Selecciona tu automóvil.</p>
+
+      <div class="cards">
+        <div class="game-card">
+          <h2>NEON STARTER</h2>
+          <p>Velocidad: 70</p>
+          <p>Aceleración: 70</p>
+          <p>Control: 90</p>
+          <span>✓ Vehículo inicial</span>
+        </div>
+
+        <div class="game-card locked">
+          <h2>THUNDER X</h2>
+          <p>Velocidad: 85</p>
+          <p>Aceleración: 90</p>
+          <p>Control: 65</p>
+          <span>🔒 Por desbloquear</span>
+        </div>
+
+        <div class="game-card locked">
+          <h2>SHADOW GT</h2>
+          <p>Velocidad: 95</p>
+          <p>Aceleración: 75</p>
+          <p>Control: 70</p>
+          <span>🔒 Por desbloquear</span>
+        </div>
+      </div>
+
+      <button class="back-btn" data-screen="home">← VOLVER</button>
+    </div>
+  `,
+
+  tracks: `
+    <div class="screen content-screen">
+      <h1 class="section-title">🛣️ CIRCUITOS</h1>
+
+      <div class="cards">
+        <div class="game-card">
+          <h2>NEON CITY</h2>
+          <p>Ciudad futurista de alta velocidad.</p>
+        </div>
+
+        <div class="game-card">
+          <h2>CYBER DESERT</h2>
+          <p>Desierto tecnológico con obstáculos.</p>
+        </div>
+
+        <div class="game-card">
+          <h2>PLASMA CIRCUIT</h2>
+          <p>Un circuito para pilotos expertos.</p>
+        </div>
+      </div>
+
+      <button class="back-btn" data-screen="home">← VOLVER</button>
+    </div>
+  `,
+
+  challenges: `
+    <div class="screen content-screen">
+      <h1 class="section-title">🎯 DESAFÍOS</h1>
+
+      <div class="cards">
+        <div class="game-card">
+          <h2>PRIMER TRIUNFO</h2>
+          <p>Gana tu primera carrera.</p>
+          <span>Recompensa: 100 monedas</span>
+        </div>
+
+        <div class="game-card">
+          <h2>PILOTO VELOZ</h2>
+          <p>Supera un tiempo objetivo.</p>
+          <span>Recompensa: 200 monedas</span>
+        </div>
+
+        <div class="game-card">
+          <h2>SIN ERRORES</h2>
+          <p>Termina una carrera sin chocar.</p>
+          <span>Recompensa: 250 monedas</span>
+        </div>
+      </div>
+
+      <button class="back-btn" data-screen="home">← VOLVER</button>
+    </div>
+  `,
+
+  stats: `
+    <div class="screen content-screen">
+      <h1 class="section-title">📊 ESTADÍSTICAS</h1>
+
+      <div class="game-panel">
+        <p>Carreras jugadas: <strong>0</strong></p>
+        <p>Carreras ganadas: <strong>0</strong></p>
+        <p>Mejor tiempo: <strong>--:--</strong></p>
+        <p>Monedas: <strong>0</strong></p>
+      </div>
+
+      <button class="back-btn" data-screen="home">← VOLVER</button>
+    </div>
+  `,
+
+  laboratory: `
+    <div class="screen content-screen">
+      <h1 class="section-title">💻 LABORATORIO PARALELO</h1>
+      <p>Pruebas del motor de simulación.</p>
+
+      <div class="game-panel">
+        <p>Motor C++: pendiente de integración</p>
+        <p>OpenMP: pendiente de integración</p>
+        <p>OpenMPI: pendiente de integración</p>
+        <p>Resultados experimentales: sin datos</p>
+      </div>
+
+      <button class="back-btn" data-screen="home">← VOLVER</button>
+    </div>
+  `,
+
+  settings: `
+    <div class="screen content-screen">
+      <h1 class="section-title">⚙ CONFIGURACIÓN</h1>
+
+      <div class="game-panel">
+        <label for="musicVolume">Volumen de música</label>
+        <input type="range" id="musicVolume" min="0" max="100" value="70">
+
+        <label for="effectsVolume">Efectos de sonido</label>
+        <input type="range" id="effectsVolume" min="0" max="100" value="80">
+
+        <p>Controles: W, A, S, D y flechas</p>
+        <p>Turbo: Espacio</p>
+        <p>Pausa: ESC</p>
+      </div>
+
+      <button class="back-btn" data-back>← VOLVER</button>
+    </div>
+  `,
+
+  about: `
+    <div class="screen content-screen">
+      <h1 class="section-title">ⓘ ACERCA DE NEON RUSH</h1>
+
+      <div class="game-panel">
+        <p>Videojuego de carreras arcade 3D.</p>
+        <p>Proyecto de TEL420 - Sistemas Paralelos.</p>
+        <p>Universidad Autónoma Juan Misael Saracho.</p>
+        <p>Desarrollado con Three.js, C++, OpenMP y OpenMPI.</p>
+        <p class="note">
+          Las tecnologías de procesamiento paralelo se integrarán
+          durante los próximos Sprints.
+        </p>
+      </div>
+
+      <button class="back-btn" data-back>← VOLVER</button>
+    </div>
+  `,
+
+  race: `
+    <div class="race-screen">
+      <div class="race-hud">
+        <div class="hud-item">
+          <span>NEON RUSH</span>
+          <strong>MODO ENTRENAMIENTO</strong>
+        </div>
+
+        <div class="hud-item">
+          <span>VELOCIDAD</span>
+          <strong><span id="speedValue">0</span> km/h</strong>
+        </div>
+      </div>
+
+      <div class="race-controls">
+        W / ↑ Acelerar · S / ↓ Frenar o retroceder
+        <br>
+        A / ← Girar izquierda · D / → Girar derecha
+      </div>
+
+      <button class="race-exit" id="exitRace">
+        ← VOLVER AL MENÚ
+      </button>
+    </div>
+  `,
+};

@@ -1,0 +1,84 @@
+services:
+  node1:
+    image: neon-rush-mpi:local
+    pull_policy: never
+    build:
+      context: ../..
+      dockerfile: infrastructure/mpi-cluster/Dockerfile
+    hostname: node1
+    environment:
+      NEON_RUSH_ROLE: coordinator
+    volumes:
+      - mpi-ssh-key:/run/neon-rush-ssh-key
+      - mpi-authorized-keys:/run/neon-rush-ssh-auth
+      - mpi-node1-hostkeys:/run/neon-rush-hostkeys
+    networks:
+      - mpi-private
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - test -s /run/neon-rush-ssh-auth/authorized_keys && ss -ltn | grep -q ':2222'
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 2s
+    init: true
+
+  node2:
+    image: neon-rush-mpi:local
+    pull_policy: never
+    hostname: node2
+    environment:
+      NEON_RUSH_ROLE: worker
+    volumes:
+      - mpi-authorized-keys:/run/neon-rush-ssh-auth:ro
+      - mpi-node2-hostkeys:/run/neon-rush-hostkeys
+    networks:
+      - mpi-private
+    depends_on:
+      node1:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - test -s /run/neon-rush-ssh-auth/authorized_keys && ss -ltn | grep -q ':2222'
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 2s
+    init: true
+
+  node3:
+    image: neon-rush-mpi:local
+    pull_policy: never
+    hostname: node3
+    environment:
+      NEON_RUSH_ROLE: worker
+    volumes:
+      - mpi-authorized-keys:/run/neon-rush-ssh-auth:ro
+      - mpi-node3-hostkeys:/run/neon-rush-hostkeys
+    networks:
+      - mpi-private
+    depends_on:
+      node1:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - test -s /run/neon-rush-ssh-auth/authorized_keys && ss -ltn | grep -q ':2222'
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 2s
+    init: true
+
+networks:
+  mpi-private:
+    internal: true
+
+volumes:
+  mpi-ssh-key:
+  mpi-authorized-keys:
+  mpi-node1-hostkeys:
+  mpi-node2-hostkeys:
+  mpi-node3-hostkeys:

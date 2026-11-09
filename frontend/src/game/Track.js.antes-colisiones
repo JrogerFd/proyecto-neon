@@ -1,0 +1,260 @@
+import * as THREE from 'three';
+
+export const TRACK = {
+  radius: 35,
+  halfStraight: 45,
+  width: 14,
+  startZ: 0
+};
+
+// Centro de la pista en función del progreso.
+// progress = 0 comienza en (radius, 0),
+// avanzando inicialmente hacia Z positivo.
+export function getTrackPoint(progress) {
+  const r = TRACK.radius;
+  const h = TRACK.halfStraight;
+
+  const straightLength = 2 * h;
+  const curveLength = Math.PI * r;
+  const totalLength = 2 * straightLength + 2 * curveLength;
+
+  let distance = (((progress % 1) + 1) % 1) * totalLength;
+
+  // Recta derecha: desde Z=0 hasta Z=+h
+  // y continuación hasta Z=-h en la vuelta.
+  // El recorrido se parametriza desde la meta.
+
+  const firstStraight = h;
+
+  if (distance < firstStraight) {
+    return new THREE.Vector3(r, 0, distance);
+  }
+
+  distance -= firstStraight;
+
+  // Curva superior: derecha -> izquierda
+  if (distance < curveLength) {
+    const angle = distance / r;
+
+    return new THREE.Vector3(
+      r * Math.cos(angle),
+      0,
+      h + r * Math.sin(angle)
+    );
+  }
+
+  distance -= curveLength;
+
+  // Recta izquierda: Z=+h -> Z=-h
+  if (distance < straightLength) {
+    return new THREE.Vector3(
+      -r,
+      0,
+      h - distance
+    );
+  }
+
+  distance -= straightLength;
+
+  // Curva inferior: izquierda -> derecha
+  if (distance < curveLength) {
+    const angle = Math.PI + distance / r;
+
+    return new THREE.Vector3(
+      r * Math.cos(angle),
+      0,
+      -h + r * Math.sin(angle)
+    );
+  }
+
+  distance -= curveLength;
+
+  // Última mitad de la recta derecha hasta la meta
+  return new THREE.Vector3(
+    r,
+    0,
+    -h + distance
+  );
+}
+
+// Distancia mínima desde un punto hasta el centro
+// de cualquiera de los tramos de la pista.
+export function distanceToTrack(x, z) {
+  const r = TRACK.radius;
+  const h = TRACK.halfStraight;
+
+  // Rectas laterales
+  if (z >= -h && z <= h) {
+    return Math.min(
+      Math.abs(x - r),
+      Math.abs(x + r)
+    );
+  }
+
+  // Curva superior
+  if (z > h) {
+    return Math.abs(
+      Math.hypot(x, z - h) - r
+    );
+  }
+
+  // Curva inferior
+  return Math.abs(
+    Math.hypot(x, z + h) - r
+  );
+}
+
+export function isOnTrack(x, z) {
+  return distanceToTrack(x, z) <= TRACK.width / 2;
+}
+
+export function createTrack(scene) {
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(300, 300),
+    new THREE.MeshStandardMaterial({
+      color: 0x050510,
+      roughness: 0.95
+    })
+  );
+
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.05;
+  scene.add(ground);
+
+  const roadMaterial = new THREE.MeshStandardMaterial({
+    color: 0x171725,
+    roughness: 0.85,
+    side: THREE.DoubleSide
+  });
+
+  const cyanMaterial = new THREE.LineBasicMaterial({
+    color: 0x00eaff
+  });
+
+  const purpleMaterial = new THREE.LineBasicMaterial({
+    color: 0xaa00ff
+  });
+
+  const outer = [];
+  const inner = [];
+  const vertices = [];
+  const indices = [];
+
+  const segments = 300;
+
+  for (let i = 0; i <= segments; i++) {
+    const progress = i / segments;
+    const point = getTrackPoint(progress);
+
+    const before = getTrackPoint(progress - 0.0001);
+    const after = getTrackPoint(progress + 0.0001);
+
+    const tangent = after.clone().sub(before).normalize();
+
+    const normal = new THREE.Vector3(
+      tangent.z,
+      0,
+      -tangent.x
+    );
+
+    const outerPoint = point.clone().addScaledVector(
+      normal,
+      TRACK.width / 2
+    );
+
+    const innerPoint = point.clone().addScaledVector(
+      normal,
+      -TRACK.width / 2
+    );
+
+    outerPoint.y = 0.02;
+    innerPoint.y = 0.02;
+
+    outer.push(outerPoint);
+    inner.push(innerPoint);
+
+    vertices.push(
+      outerPoint.x, outerPoint.y, outerPoint.z,
+      innerPoint.x, innerPoint.y, innerPoint.z
+    );
+  }
+
+  for (let i = 0; i < segments; i++) {
+    const a = i * 2;
+
+    indices.push(
+      a, a + 1, a + 2,
+      a + 1, a + 3, a + 2
+    );
+  }
+
+  const geometry = new THREE.BufferGeometry();
+
+  geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(vertices, 3)
+  );
+
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+
+  const road = new THREE.Mesh(geometry, roadMaterial);
+  scene.add(road);
+
+  scene.add(
+    new THREE.LineLoop(
+      new THREE.BufferGeometry().setFromPoints(
+        outer.slice(0, -1)
+      ),
+      cyanMaterial
+    )
+  );
+
+  scene.add(
+    new THREE.LineLoop(
+      new THREE.BufferGeometry().setFromPoints(
+        inner.slice(0, -1)
+      ),
+      purpleMaterial
+    )
+  );
+
+  // Línea de meta sobre la recta derecha
+  const finishLine = new THREE.Mesh(
+    new THREE.PlaneGeometry(TRACK.width, 2),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      side: THREE.DoubleSide
+    })
+  );
+
+  finishLine.rotation.x = -Math.PI / 2;
+  finishLine.position.set(
+    TRACK.radius,
+    0.05,
+    TRACK.startZ
+  );
+
+  scene.add(finishLine);
+
+  // Torres decorativas
+  const towerMaterial = new THREE.MeshStandardMaterial({
+    color: 0x101030,
+    emissive: 0x110033,
+    metalness: 0.7
+  });
+
+  for (let z = -80; z <= 80; z += 20) {
+    for (const x of [-65, 65]) {
+      const height = 10 + (Math.abs(z) % 15);
+
+      const tower = new THREE.Mesh(
+        new THREE.BoxGeometry(6, height, 6),
+        towerMaterial
+      );
+
+      tower.position.set(x, height / 2, z);
+      scene.add(tower);
+    }
+  }
+}

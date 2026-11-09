@@ -1,0 +1,92 @@
+export class LapManager {
+  constructor(totalLaps = 3) {
+    this.totalLaps = totalLaps;
+    this.currentLap = 1;
+    this.completedLaps = 0;
+
+    this.finished = false;
+
+    this.checkpoints = new Set();
+
+    this.requiredCheckpoints = [
+      'north',
+      'west',
+      'south'
+    ];
+
+    this.lastFinishCrossing = false;
+  }
+
+  visitCheckpoint(name) {
+    if (this.finished) return;
+
+    if (this.requiredCheckpoints.includes(name)) {
+      this.checkpoints.add(name);
+    }
+  }
+
+  hasCompletedCircuit() {
+    return this.requiredCheckpoints.every(
+      checkpoint => this.checkpoints.has(checkpoint)
+    );
+  }
+
+  crossFinishLine() {
+    if (this.finished) {
+      return {
+        valid: false,
+        finished: true
+      };
+    }
+
+    if (!this.hasCompletedCircuit()) {
+      return {
+        valid: false,
+        finished: false
+      };
+    }
+
+    this.completedLaps++;
+
+    this.checkpoints.clear();
+
+    if (this.completedLaps >= this.totalLaps) {
+      this.finished = true;
+
+      return {
+        valid: true,
+        finished: true,
+        completedLaps: this.completedLaps
+      };
+    }
+
+    this.currentLap = this.completedLaps + 1;
+
+    return {
+      valid: true,
+      finished: false,
+      currentLap: this.currentLap,
+      completedLaps: this.completedLaps
+    };
+  }
+
+  reset() {
+    this.currentLap = 1;
+    this.completedLaps = 0;
+
+    this.finished = false;
+
+    this.checkpoints.clear();
+
+    this.lastFinishCrossing = false;
+  }
+
+  getProgress() {
+    return {
+      currentLap: this.currentLap,
+      totalLaps: this.totalLaps,
+      completedLaps: this.completedLaps,
+      finished: this.finished
+    };
+  }
+}
